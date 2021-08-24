@@ -28,8 +28,23 @@ resource "aws_elb" "example" {
 In the example above, you will have to have module ‘servers’ to have output file to expose variables for this resource.
 
 
+## REFACTOR YOUR PROJECT USING MODULES
 
+- Refactor your project using Modules
 
+Break down your Terraform codes to have all resources in their respective modules. Combine resources of a similar type into directories within a ‘modules’ directory, for example, like this:
+
+```
+- modules
+  - ALB
+  - EFS
+  - RDS
+  - autoscaling
+  - compute
+  - network
+  - security
+  ```
+  
 
 
 
