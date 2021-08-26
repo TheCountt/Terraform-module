@@ -11,7 +11,7 @@
 #such as vpc, subnets, gateways and all neccssary things to enable proper connectivity
 
 module "network" {
-  source                         = "C:/Users/user/18-Project/modules/network"
+  source                         = "./modules/network"
   region                         = var.region
   vpc_cidr                       = var.vpc_cidr
   enable_dns_support             = var.enable_dns_support
@@ -28,7 +28,7 @@ module "network" {
 
 # The Module creates instances for various servers
 module "compute" {
-  source          = "C:/Users/user/18-Project/modules/compute"
+  source          = "./modules/compute"
   ami-bastion     = "ami-054965c6cd7c6e462"
   ami-nginx       = "ami-054965c6cd7c6e462"
   ami-webserver   = "ami-054965c6cd7c6e462"
@@ -36,3 +36,58 @@ module "compute" {
   sg-compute      = module.network.ALB-sg
   keypair         = "devops-key"
 }
+
+#Module for Application Load balancer, this will create Extenal Load balancer and internal load balancer
+module "ALB" {
+  source        = "./modules/ALB"
+  vpc_id        = module.network.vpc_id
+  public-sg     = module.network.ALB-sg
+  private-sg    = module.network.IALB-sg
+  public-sbn-1  = module.network.public_subnets-1
+  public-sbn-2  = module.network.public_subnets-2
+  private-sbn-1 = module.network.private_subnets-1
+  private-sbn-2 = module.network.private_subnets-2
+}
+
+# Module for Autoscaling groups; this module will create all autoscaling groups for bastion,
+# nginx, and the webservers.
+
+# module "autoscaling" {
+#   source            = "./modules/autoscaling"
+#   ami-web           = "ami-054965c6cd7c6e462"
+#   ami-bastion       = "ami-054965c6cd7c6e462"
+#   ami-nginx         = "ami-054965c6cd7c6e462"
+#   template_az       = var.region
+#   web-sg            = module.network.web-sg
+#   bastion-sg        = module.network.bastion-sg
+#   nginx-sg          = module.network.nginx-sg
+#   wordpress-alb-tgt = module.ALB.wordpress-tgt
+#   nginx-alb-tgt     = module.ALB.nginx-tgt
+#   tooling-alb-tgt   = module.ALB.tooling-tgt
+#   instance_profile  = module.network.instance_profile
+#   public_subnets-1  = module.network.public_subnets-1
+#   public_subnets-2  = module.network.public_subnets-2
+#   private_subnets-1 = module.network.private_subnets-1
+#   private_subnets-2 = module.network.private_subnets-2
+#   keypair           = "devops-key"
+
+# }
+
+# module "EFS" {
+#   source       = "./modules/EFS"
+#   efs-subnet-1 = module.network.private_subnets-1
+#   efs-subnet-2 = module.network.private_subnets-2
+#   efs-sg       = module.network.data-layer
+#   account_no   = var.account_no
+# }
+
+# # RDS module; this module will create the RDS instance in the private subnet
+
+# module "RDS" {
+#   source          = "./modules/RDS"
+#   db-password     = var.db-password
+#   db-username     = var.db-username
+#   db-sg           = module.network.data-layer
+#   private_subnets = module.network.private_subnets
+# }
+
