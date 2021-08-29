@@ -212,7 +212,7 @@ resource "aws_security_group_rule" "nginx-bastion" {
   to_port                  = 22
   protocol                 = local.tcp_protocol
   source_security_group_id = aws_security_group.terraform-sg["bastion"].id
-  security_group_id        = aws_security_group.terrafrom-sg["nginx"].id
+  security_group_id        = aws_security_group.terraform-sg["nginx"].id
 }
 
 resource "aws_security_group_rule" "IALB" {

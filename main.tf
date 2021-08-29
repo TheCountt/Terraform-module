@@ -1,11 +1,3 @@
-# # Get list of availability zones
-# data "aws_availability_zones" "available" {
-# state = "available"
-# }
-
-# provider "aws" {
-#   region = var.region
-# }
 
 # Module for network; This module will create all the neccessary resources for the entire project,
 #such as vpc, subnets, gateways and all neccssary things to enable proper connectivity
@@ -19,34 +11,34 @@ module "network" {
   enable_classiclink             = var.enable_classiclink
   enable_classiclink_dns_support = var.enable_classiclink_dns_support
   max_subnets                    = 10
-  public_subnet_count                = 2
-  private_subnet_count               = 4
+  public_subnet_count            = 2
+  private_subnet_count           = 4
   private_subnets                = [for i in range(1, 8, 2) : cidrsubnet(var.vpc_cidr, 8, i)]
   public_subnets                 = [for i in range(2, 5, 2) : cidrsubnet(var.vpc_cidr, 8, i)]
   security_groups                = local.security_groups
 }
 
-# The Module creates instances for various servers
-module "compute" {
-  source          = "./modules/compute"
-  ami-bastion     = "ami-054965c6cd7c6e462"
-  ami-nginx       = "ami-054965c6cd7c6e462"
-  ami-webserver   = "ami-054965c6cd7c6e462"
-  subnets-compute = module.network.public_subnets-1
-  sg-compute      = module.network.ALB-sg
-  keypair         = "devops-key"
-}
+# # The Module creates instances for various servers
+# module "compute" {
+#   source          = "./modules/compute"
+#   ami-bastion     = "ami-054965c6cd7c6e462"
+#   ami-nginx       = "ami-054965c6cd7c6e462"
+#   ami-webserver   = "ami-054965c6cd7c6e462"
+#   subnets-compute = module.network.public_subnets-1
+#   sg-compute      = module.network.ALB-sg
+#   keypair         = "devops-key"
+# }
 
-#Module for Application Load balancer, this will create Extenal Load balancer and internal load balancer
-module "ALB" {
-  source        = "./modules/ALB"
-  public-sg     = module.network.ALB-sg
-  private-sg    = module.network.IALB-sg
-  public-sbn-1  = module.network.public_subnets-1
-  public-sbn-2  = module.network.public_subnets-2
-  private-sbn-1 = module.network.private_subnets-1
-  private-sbn-2 = module.network.private_subnets-2
-}
+# #Module for Application Load balancer, this will create Extenal Load balancer and internal load balancer
+# module "ALB" {
+#   source        = "./modules/ALB"
+#   public-sg     = module.network.ALB-sg
+#   private-sg    = module.network.IALB-sg
+#   public-sbn-1  = module.network.public_subnets-1
+#   public-sbn-2  = module.network.public_subnets-2
+#   private-sbn-1 = module.network.private_subnets-1
+#   private-sbn-2 = module.network.private_subnets-2
+# }
 
 # Module for Autoscaling groups; this module will create all autoscaling groups for bastion,
 # nginx, and the webservers.
