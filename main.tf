@@ -19,8 +19,8 @@ module "network" {
   enable_classiclink             = var.enable_classiclink
   enable_classiclink_dns_support = var.enable_classiclink_dns_support
   max_subnets                    = 10
-  public_sn_count                = 2
-  private_sn_count               = 4
+  public_subnet_count                = 2
+  private_subnet_count               = 4
   private_subnets                = [for i in range(1, 8, 2) : cidrsubnet(var.vpc_cidr, 8, i)]
   public_subnets                 = [for i in range(2, 5, 2) : cidrsubnet(var.vpc_cidr, 8, i)]
   security_groups                = local.security_groups
@@ -40,7 +40,6 @@ module "compute" {
 #Module for Application Load balancer, this will create Extenal Load balancer and internal load balancer
 module "ALB" {
   source        = "./modules/ALB"
-  vpc_id        = module.network.vpc_id
   public-sg     = module.network.ALB-sg
   private-sg    = module.network.IALB-sg
   public-sbn-1  = module.network.public_subnets-1

@@ -3,7 +3,7 @@ locals {
   security_groups = {
     ALB = {
       name        = "ALB-sg"
-      description = "for external loadbalancer"
+      description = "for external loadbalncer"
       ingress = {
         HTTPS = {
           from     = 0
@@ -11,7 +11,10 @@ locals {
           protocol = "-1"
         }
       }
+
+
     }
+
     # security group for bastion
     bastion = {
       name        = "bastion-sg"
@@ -24,6 +27,7 @@ locals {
         }
       }
     }
+
     # security group for nginx
     nginx = {
       name        = "nginx-sg"
@@ -35,6 +39,7 @@ locals {
           protocol = "tcp"
         }
       }
+
       ingress = {
         ssh = {
           from     = 22
@@ -43,6 +48,7 @@ locals {
         }
       }
     }
+
     # security group for IALB
     IALB = {
       name        = "IALB-sg"
@@ -55,6 +61,8 @@ locals {
         }
       }
     }
+
+
     # security group for webservers
     webservers = {
       name        = "webservers-sg"
@@ -74,6 +82,8 @@ locals {
         }
       }
     }
+
+
     # security group for data-layer
     data-layer = {
       name        = "DL-sg"
@@ -85,6 +95,7 @@ locals {
           protocol = "tcp"
         }
       }
+
       ingress = {
         mysql = {
           from     = 3306

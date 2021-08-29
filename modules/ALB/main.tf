@@ -3,11 +3,11 @@ resource "aws_lb" "my-aws-alb" {
   name     = "my-test-alb"
   internal = false
   security_groups = [
-    aws_security_group.my-alb-sg.id,
+    aws_security_group.my-sg["ALB"].id,
   ]
   subnets = [
-    aws_subnet.public[0].id,
-    aws_subnet.public[1].id
+    aws_subnet.public_subnets[0].id,
+    aws_subnet.public_subnets[1].id
   ]
   tags = {
     Name = "my-test-alb"
@@ -31,7 +31,7 @@ resource "aws_lb_target_group" "my-target-group" {
   port        = 80
   protocol    = "HTTP"
   target_type = "instance"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = aws_vpc.my_vpc.id
 }
 
 # Create Listener for Target Group
@@ -51,11 +51,11 @@ resource "aws_lb" "my-aws-alb-private" {
   name     = "my-test-alb-private"
   internal = true
   security_groups = [
-    aws_security_group.my-alb-sg.id,
+    aws_security_group.my-sg["ALB"].id,
   ]
   subnets = [
-    aws_subnet.private_A[0].id,
-    aws_subnet.private_A[1].id
+    aws_subnet.private_subnets[0].id,
+    aws_subnet.private_subnets[1].id
     
   ]
   tags = {
@@ -80,7 +80,7 @@ resource "aws_lb_target_group" "my-target-group_private" {
   port        = 80
   protocol    = "HTTP"
   target_type = "instance"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = aws_vpc.my_vpc.id
 }
 
 # Create Listener for Internal Load Balancer

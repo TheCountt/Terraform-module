@@ -1,6 +1,6 @@
 # create IAM role for all instance
-resource "aws_iam_role" "my-role" {
-  name = "my-role"
+resource "aws_iam_role" "terraform-role" {
+  name = "terraform-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -16,15 +16,15 @@ resource "aws_iam_role" "my-role" {
   })
 
   tags = {
-    tag-key = "%your_name%-role"
+    tag-key = "terraform-role"
   }
 }
 
 # create IAM policy for all instance
-resource "aws_iam_policy" "my-policy" {
-  name        = "my_policy"
+resource "aws_iam_policy" "terraform-policy" {
+  name        = "terraform_policy"
   path        = "/"
-  description = "%Your name% policy"
+  description = "terraform policy"
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -40,15 +40,15 @@ resource "aws_iam_policy" "my-policy" {
 }
 
 # attach IAM policy to the IAM role
-resource "aws_iam_role_policy_attachment" "my-attach" {
-  role       = aws_iam_role.my-role.name
-  policy_arn = aws_iam_policy.my-policy.arn
+resource "aws_iam_role_policy_attachment" "terraform-attach" {
+  role       = aws_iam_role.terraform-role.name
+  policy_arn = aws_iam_policy.terraform-policy.arn
 }
 
 # create instance profile and attach to the IAM role
-resource "aws_iam_instance_profile" "my-profile" {
-  name = "aws_instance_profile_my-profile"
-  role = aws_iam_role.my-role.name
+resource "aws_iam_instance_profile" "terraform-profile" {
+  name = "aws_instance_profile_terraform-profile"
+  role = aws_iam_role.terraform-role.name
 }
 
 # provide a public key for the instance

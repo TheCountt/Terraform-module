@@ -22,6 +22,7 @@ output "private_subnets-2" {
   description = "The second private subnet"
 }
 
+
 # output for the third private subnet in the index
 output "private_subnets-3" {
   value       = aws_subnet.private-subnets[2].id
@@ -33,45 +34,54 @@ output "private_subnets" {
   description = "All private subnet"
 }
 
+
 # output for the fourth private subnet in the index
 output "private_subnets-4" {
   value       = aws_subnet.private-subnets[3].id
   description = "The fourth private subnet"
 }
 
+
+
 # output for application load balancer security group
 output "ALB-sg" {
-  value = aws_security_group.my-sg["ALB"].id
+  value = aws_security_group.terraform-sg["ALB"].id
 }
+
 
 # output for the intetrnal load balancer security group
 output "IALB-sg" {
-  value = aws_security_group.my-sg["IALB"].id
+  value = aws_security_group.terraform-sg["IALB"].id
 }
+
 
 # output for the bastion security group
 output "bastion-sg" {
-  value = aws_security_group.my-sg["bastion"].id
+  value = aws_security_group.terraform-sg["bastion"].id
 }
+
 
 # output for the nginx security group
 output "nginx-sg" {
-  value = aws_security_group.my-sg["nginx"].id
+  value = aws_security_group.terraform-sg["nginx"].id
 }
+
 
 # output for the webservers security group
 output "web-sg" {
-  value = aws_security_group.my-sg["webservers"].id
+  value = aws_security_group.terraform-sg["webservers"].id
 }
+
 
 # output for the data layer security group
 output "data-layer" {
-  value = aws_security_group.my-sg["data-layer"].id
+  value = aws_security_group.terraform-sg["data-layer"].id
 }
+
 
 # output for the vpc id
 output "vpc_id" {
-  value = aws_vpc.my_vpc.id
+  value = aws_vpc.terraform.id
 }
 
 # output for the max subnets
@@ -79,7 +89,8 @@ output "max_subnets" {
   value = 10
 }
 
+
 # output for the instance profile
 output "instance_profile" {
-  value = aws_iam_instance_profile.my-profile.id
+  value = aws_iam_instance_profile.terraform-profile.id
 }
