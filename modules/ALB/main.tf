@@ -1,23 +1,21 @@
-# Create (Internet-facing)Application Load Balancer
-resource "aws_lb" "my-aws-alb" {
-  name     = "my-test-alb"
+/// Resources for Nginx Reverse Proxy
+
+# Create a External(Internet-Facing) Load Balancer
+resource "aws_lb" "terraform-external-alb" {
+  name     = "terraform-external-alb"
   internal = false
-  security_groups = [
-    aws_security_group.my-sg["ALB"].id,
-  ]
-  subnets = [
-    aws_subnet.public_subnets[0].id,
-    aws_subnet.public_subnets[1].id
-  ]
+  security_groups = [var.public-sg]
+  subnets = [var.public-sbn-1, var.public-sbn-2]
+
   tags = {
-    Name = "my-test-alb"
+    Name = "terraform-external-alb"
   }
   ip_address_type    = "ipv4"
   load_balancer_type = "application"
 }
 
 # Create a Target Group
-resource "aws_lb_target_group" "my-target-group" {
+resource "aws_lb_target_group" "nginx-target-group" {
   health_check {
     interval            = 10
     path                = "/"
@@ -27,46 +25,46 @@ resource "aws_lb_target_group" "my-target-group" {
     unhealthy_threshold = 2
   }
 
-  name        = "my-test-tg"
+  name        = "nginx-target-group"
   port        = 80
   protocol    = "HTTP"
   target_type = "instance"
-  vpc_id      = aws_vpc.my_vpc.id
+  vpc_id      = var.vpc_id
 }
 
 # Create Listener for Target Group
-resource "aws_lb_listener" "my-test-alb-listener" {
-  load_balancer_arn = aws_lb.my-aws-alb.arn
+resource "aws_lb_listener" "nginx-listener-80" {
+  load_balancer_arn = aws_lb.terraform-external-alb.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.my-target-group.arn
+    target_group_arn = aws_lb_target_group.nginx-target-group.arn
   }
 }
 
+/// Resources for Web Servers
+
 # Create Internal Application Load Balancer
-resource "aws_lb" "my-aws-alb-private" {
-  name     = "my-test-alb-private"
+resource "aws_lb" "terraform-internal-alb" {
+  name     = "terraform-internal-alb"
   internal = true
-  security_groups = [
-    aws_security_group.my-sg["ALB"].id,
-  ]
-  subnets = [
-    aws_subnet.private_subnets[0].id,
-    aws_subnet.private_subnets[1].id
-    
-  ]
+  security_groups = [var.private-sg]
+  subnets = [var.private-sbn-1, var.private-sbn-2]
+
   tags = {
-    Name = "my-test-alb-private"
+    Name = "terraform-internal-alb"
   }
   ip_address_type    = "ipv4"
   load_balancer_type = "application"
 }
 
-# Create Target Group for Private Servers
-resource "aws_lb_target_group" "my-target-group_private" {
+# Create Target Group for Webservers
+
+## for tooling website
+
+resource "aws_lb_target_group" "tooling-target-group" {
   health_check {
     interval            = 10
     path                = "/"
@@ -76,21 +74,67 @@ resource "aws_lb_target_group" "my-target-group_private" {
     unhealthy_threshold = 2
   }
 
-  name        = "my-test-private"
+  name        = "tooling-target-group"
   port        = 80
   protocol    = "HTTP"
   target_type = "instance"
-  vpc_id      = aws_vpc.my_vpc.id
+  vpc_id      = var.vpc_id
 }
 
-# Create Listener for Internal Load Balancer
-resource "aws_lb_listener" "my-test-alb-listener-private" {
-  load_balancer_arn = aws_lb.my-aws-alb-private.arn
+## for wordpress website
+
+resource "aws_lb_target_group" "wordpress-target-group" {
+  health_check {
+    interval            = 10
+    path                = "/"
+    protocol            = "HTTP"
+    timeout             = 5
+    healthy_threshold   = 5
+    unhealthy_threshold = 2
+  }
+
+  name        = "wordpress-target-group"
+  port        = 80
+  protocol    = "HTTP"
+  target_type = "instance"
+  vpc_id      = var.vpc_id
+}
+
+# Create Listeners for the Target Groups
+## You can only create a single listener for a port to avoid errors. We will add a listener rule to route traffic
+## to the wordpress target group
+
+resource "aws_lb_listener" "webserver-listener-80" {
+  load_balancer_arn = aws_lb.terraform-internal-alb.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.my-target-group_private.arn
+    target_group_arn = aws_lb_target_group.wordpress-target-group.arn
   }
 }
+
+## listener rule for to route requests to tooling target
+## A rule was created to route traffic to tooling when the host header changes
+
+resource "aws_lb_listener_rule" "webserver-listener-80-rule" {
+  listener_arn = aws_lb_listener.webserver-listener-80.arn
+  priority     = 99
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.tooling-target-group.arn
+  }
+
+  condition {
+    host_header {
+      values = ["tooling.kragrahl.cf"]
+    }
+  }
+}
+
+
+
+
+

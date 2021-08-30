@@ -29,16 +29,17 @@ module "compute" {
   keypair         = "terraform-key"
 }
 
-# #Module for Application Load balancer, this will create Extenal Load balancer and internal load balancer
-# module "ALB" {
-#   source        = "./modules/ALB"
-#   public-sg     = module.network.ALB-sg
-#   private-sg    = module.network.IALB-sg
-#   public-sbn-1  = module.network.public_subnets-1
-#   public-sbn-2  = module.network.public_subnets-2
-#   private-sbn-1 = module.network.private_subnets-1
-#   private-sbn-2 = module.network.private_subnets-2
-# }
+#Module for Application Load balancer, this will create Extenal Load balancer and Internal load balancer
+module "ALB" {
+  source        = "./modules/ALB"
+  vpc_id        = module.network.vpc_id
+  public-sg     = module.network.ALB-sg
+  private-sg    = module.network.IALB-sg
+  public-sbn-1  = module.network.public_subnets-1
+  public-sbn-2  = module.network.public_subnets-2
+  private-sbn-1 = module.network.private_subnets-1
+  private-sbn-2 = module.network.private_subnets-2
+}
 
 # Module for Autoscaling groups; this module will create all autoscaling groups for bastion,
 # nginx, and the webservers.
@@ -60,7 +61,7 @@ module "compute" {
 #   public_subnets-2  = module.network.public_subnets-2
 #   private_subnets-1 = module.network.private_subnets-1
 #   private_subnets-2 = module.network.private_subnets-2
-#   keypair           = "devops-key"
+#   keypair           = "terraform-key"
 
 # }
 
