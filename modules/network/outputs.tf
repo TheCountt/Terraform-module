@@ -68,7 +68,7 @@ output "nginx-sg" {
 
 
 # output for the webservers security group
-output "web-sg" {
+output "webservers-sg" {
   value = aws_security_group.terraform-sg["webservers"].id
 }
 

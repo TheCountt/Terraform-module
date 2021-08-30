@@ -5,7 +5,7 @@ resource "aws_lb" "terraform-external-alb" {
   name     = "terraform-external-alb"
   internal = false
   security_groups = [var.public-sg]
-  subnets = [var.public-sbn-1, var.public-sbn-2]
+  subnets = [var.public-subnets-1, var.public-subnets-2]
 
   tags = {
     Name = "terraform-external-alb"
@@ -51,7 +51,7 @@ resource "aws_lb" "terraform-internal-alb" {
   name     = "terraform-internal-alb"
   internal = true
   security_groups = [var.private-sg]
-  subnets = [var.private-sbn-1, var.private-sbn-2]
+  subnets = [var.private-subnets-1, var.private-subnets-2]
 
   tags = {
     Name = "terraform-internal-alb"

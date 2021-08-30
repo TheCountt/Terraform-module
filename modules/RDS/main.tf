@@ -1,25 +1,45 @@
+resource "random_shuffle" "private-sb" {
+  input        = var.private_subnets
+  result_count = 2
+}
+
+
 # Create DB Subnet Group
-resource "aws_db_subnet_group" "db_instances" {
-  name       = "db_instances"
-  subnet_ids = [aws_subnet.private_B[0].id, aws_subnet.private_B[1].id]
+resource "aws_db_subnet_group" "terraform-rds_subnet-group" {
+  name       = "terraform-rds_subnet-group"
+  subnet_ids = random_shuffle.private-sb.result
 
   tags = {
-    Name = "My DB subnet group"
+    Name = "terraform-rds_subnet-group"
   }
 }
 
-# Create rds DB
-resource "aws_db_instance" "default" {
+# Create AWS Secret Manager
+data "aws_secretsmanager_secret_version" "credentials" {
+  # Fill in the name you gave to your secret
+  secret_id = "db-secret"
+}
+
+locals {
+  db_secret = jsondecode(
+    data.aws_secretsmanager_secret_version.credentials.secret_string
+  )
+}
+
+# Create DB instance
+resource "aws_db_instance" "terraform-rds" {
   allocated_storage    = 20
   storage_type         = "gp2"
   engine               = "mysql"
   engine_version       = "5.7"
   instance_class       = "db.t2.micro"
   name                 = "mydb"
-  username             = "admin"
-  password             = "admin1234"
+  username             = local.db_secret.username
+  password             = local.db_secret.password
   parameter_group_name = "default.mysql5.7"
-  db_subnet_group_name = aws_db_subnet_group.db_instances.name
+  db_subnet_group_name = "aws_db_subnet_group.terraform-rds_subnet-group.name"
+  vpc_security_group_ids = [var.db-sg]
   skip_final_snapshot  = true
-  multi_az             = "true"
+  multi_az             = true
+
 }
