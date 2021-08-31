@@ -1350,3 +1350,234 @@ output "port" {
 ```
 Run command `terraform init` and `terraform plan`.( If there are problems with your code, there will be an error message here first)
 
+
+### Root module
+The root module is the one located in your working directory, all the other modules above we have created in folders are called ***child modules***.
+
+Paste the code below into the `main.tf` file in the root module so the the `main.tf` file will look up the modules and the output variable from the modules:
+
+```
+# Module for network; This module will create all the neccessary resources for the entire project,
+#such as vpc, subnets, gateways and all neccssary things to enable proper connectivity
+
+module "network" {
+  source                         = "./modules/network"
+  region                         = var.region
+  vpc_cidr                       = var.vpc_cidr
+  enable_dns_support             = var.enable_dns_support
+  enable_dns_hostnames           = var.enable_dns_hostnames
+  enable_classiclink             = var.enable_classiclink
+  enable_classiclink_dns_support = var.enable_classiclink_dns_support
+  max_subnets                    = 10
+  public_subnet_count            = 2
+  private_subnet_count           = 4
+  private_subnets                = [for i in range(1, 8, 2) : cidrsubnet(var.vpc_cidr, 8, i)]
+  public_subnets                 = [for i in range(2, 5, 2) : cidrsubnet(var.vpc_cidr, 8, i)]
+  security_groups                = local.security_groups
+}
+
+# The Module creates instances for various servers
+module "compute" {
+  source          = "./modules/compute"
+  instance_type   = var.instance_type
+  ami-bastion     = var.ami
+  ami-nginx       = var.ami
+  ami-webserver   = var.ami
+  subnets-compute = module.network.public_subnets-1
+  sg-compute      = module.network.ALB-sg
+  keypair         = "terraform-key"
+}
+
+#Module for Application Load balancer, this will create Extenal Load balancer and Internal load balancer
+module "ALB" {
+  source            = "./modules/ALB"
+  vpc_id            = module.network.vpc_id
+  public-sg         = module.network.ALB-sg
+  private-sg        = module.network.IALB-sg
+  public-subnets-1  = module.network.public_subnets-1
+  public-subnets-2  = module.network.public_subnets-2
+  private-subnets-1 = module.network.private_subnets-1
+  private-subnets-2 = module.network.private_subnets-2
+}
+
+# Module for Elastic Filesystem; this module will creat elastic file system isn the webservers availablity
+# zone and allow traffic fro the webservers
+
+module "EFS" {
+  source       = "./modules/EFS"
+  efs-subnet-1 = module.network.private_subnets-1
+  efs-subnet-2 = module.network.private_subnets-2
+  efs-sg       = module.network.data-layer
+  account_no   = var.account_no
+}
+
+# Module for Autoscaling groups; this module will create all autoscaling groups for bastion,
+# nginx, and the webservers.
+
+module "autoscaling" {
+  source                 = "./modules/autoscaling"
+  instance_type          = var.instance_type
+  ami-web                = var.ami
+  ami-bastion            = var.ami
+  ami-nginx              = var.ami
+  template_az            = var.region
+  webservers-sg          = module.network.webservers-sg
+  bastion-sg             = module.network.bastion-sg
+  nginx-sg               = module.network.nginx-sg
+  wordpress-target-group = module.ALB.wordpress-target-group
+  nginx-target-group     = module.ALB.nginx-target-group
+  tooling-target-group   = module.ALB.tooling-target-group
+  instance_profile       = module.network.instance_profile
+  public_subnets-1       = module.network.public_subnets-1
+  public_subnets-2       = module.network.public_subnets-2
+  private_subnets-1      = module.network.private_subnets-1
+  private_subnets-2      = module.network.private_subnets-2
+  keypair                = "terraform-key"
+
+}
+
+# RDS module; this module will create the RDS instance in the private subnet
+
+module "RDS" {
+  source          = "./modules/RDS"
+  db-sg           = module.network.data-layer
+  private_subnets = module.network.private_subnets
+}
+```
+
+We need to specify a provider in the root module. Though it can be specified in the `main.tf` file, you can also create a file for it,so we will create two files, one for the provider and also one for the data source to access the list of the AWS availability zones which can be accessed by an AWS account within the region configured in the provider.
+
+- Create a file named `providers.tf` and paste the code below:
+```
+provider "aws" {
+  region = var.region
+}
+```
+
+- Create a file named `data.tf` and paste the code below:
+```
+# Get list of availability zones
+data "aws_availability_zones" "available" {
+state = "available"
+}
+```
+
+In the network module, recall that we wrote code to dynamically create security groups. We need to create a file in the root module to reference since we used a ***locals variable*** so it will be looked up and picked up when we apply our code or else we will get an error message. To this end we will create a file called `security.tf` and paste the code below:
+
+```
+# creating dynamic ingress security groups
+locals {
+  security_groups = {
+    ALB = {
+      name        = "ALB-sg"
+      description = "for external loadbalncer"
+      ingress = {
+        HTTPS = {
+          from     = 0
+          to       = 0
+          protocol = "-1"
+        }
+      }
+
+
+    }
+
+    # security group for bastion
+    bastion = {
+      name        = "bastion-sg"
+      description = "for bastion instances"
+      ingress = {
+        ssh = {
+          from     = 22
+          to       = 22
+          protocol = "tcp"
+        }
+      }
+    }
+
+    # security group for nginx
+    nginx = {
+      name        = "nginx-sg"
+      description = "nginx instances"
+      ingress = {
+        HTTP = {
+          from     = 80
+          to       = 80
+          protocol = "tcp"
+        }
+      }
+
+      ingress = {
+        ssh = {
+          from     = 22
+          to       = 22
+          protocol = "tcp"
+        }
+      }
+    }
+
+    # security group for IALB
+    IALB = {
+      name        = "IALB-sg"
+      description = "IALB security group"
+      ingress = {
+        HTTP = {
+          from     = 80
+          to       = 80
+          protocol = "tcp"
+        }
+      }
+    }
+
+
+    # security group for webservers
+    webservers = {
+      name        = "webservers-sg"
+      description = "webservers security group"
+      ingress = {
+        HTTP = {
+          from     = 80
+          to       = 80
+          protocol = "tcp"
+        }
+      }
+      ingress = {
+        ssh = {
+          from     = 22
+          to       = 22
+          protocol = "tcp"
+        }
+      }
+    }
+
+
+    # security group for data-layer
+    data-layer = {
+      name        = "DL-sg"
+      description = "data layer security group"
+      ingress = {
+        nfs = {
+          from     = 2049
+          to       = 2049
+          protocol = "tcp"
+        }
+      }
+
+      ingress = {
+        mysql = {
+          from     = 3306
+          to       = 3306
+          protocol = "tcp"
+        }
+      }
+      ingress = {
+        ssh = {
+          from     = 22
+          to       = 22
+          protocol = "tcp"
+        }
+      }
+    }
+  }
+}
+```
