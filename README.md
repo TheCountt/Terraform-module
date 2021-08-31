@@ -1611,6 +1611,7 @@ The structure of your working directory should look like this:
     ├── backends.tf
     ├── providers.tf
     ├── data.tf
+    ├── security.tf
     ├── outputs.tf
     ├── terraform.tfvars (do not forget to add it to .gitignore since it can contain your sensitive information)
     └── variables.tf
