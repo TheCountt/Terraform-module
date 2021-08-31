@@ -615,7 +615,661 @@ resource "aws_key_pair" "terraform-key" {
 }
 ```
 
+### Module ALB
+In the `main.tf` file, paste the following code:
+```
+/// Resources for Nginx Reverse Proxy
 
+# Create an External(Internet-Facing) Load Balancer
+resource "aws_lb" "terraform-external-alb" {
+  name     = "terraform-external-alb"
+  internal = false
+  security_groups = [var.public-sg]
+  subnets = [var.public-subnets-1, var.public-subnets-2]
+
+  tags = {
+    Name = "terraform-external-alb"
+  }
+  ip_address_type    = "ipv4"
+  load_balancer_type = "application"
+}
+
+# Create a Target Group
+resource "aws_lb_target_group" "nginx-target-group" {
+  health_check {
+    interval            = 10
+    path                = "/"
+    protocol            = "HTTP"
+    timeout             = 5
+    healthy_threshold   = 5
+    unhealthy_threshold = 2
+  }
+
+  name        = "nginx-target-group"
+  port        = 80
+  protocol    = "HTTP"
+  target_type = "instance"
+  vpc_id      = var.vpc_id
+}
+
+# Create Listener for Target Group
+resource "aws_lb_listener" "nginx-listener-80" {
+  load_balancer_arn = aws_lb.terraform-external-alb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.nginx-target-group.arn
+  }
+}
+
+/// Resources for Web Servers
+
+# Create Internal Application Load Balancer
+resource "aws_lb" "terraform-internal-alb" {
+  name     = "terraform-internal-alb"
+  internal = true
+  security_groups = [var.private-sg]
+  subnets = [var.private-subnets-1, var.private-subnets-2]
+
+  tags = {
+    Name = "terraform-internal-alb"
+  }
+  ip_address_type    = "ipv4"
+  load_balancer_type = "application"
+}
+
+# Create Target Group for Webservers
+
+## for tooling website
+
+resource "aws_lb_target_group" "tooling-target-group" {
+  health_check {
+    interval            = 10
+    path                = "/"
+    protocol            = "HTTP"
+    timeout             = 5
+    healthy_threshold   = 5
+    unhealthy_threshold = 2
+  }
+
+  name        = "tooling-target-group"
+  port        = 80
+  protocol    = "HTTP"
+  target_type = "instance"
+  vpc_id      = var.vpc_id
+}
+
+## for wordpress website
+
+resource "aws_lb_target_group" "wordpress-target-group" {
+  health_check {
+    interval            = 10
+    path                = "/"
+    protocol            = "HTTP"
+    timeout             = 5
+    healthy_threshold   = 5
+    unhealthy_threshold = 2
+  }
+
+  name        = "wordpress-target-group"
+  port        = 80
+  protocol    = "HTTP"
+  target_type = "instance"
+  vpc_id      = var.vpc_id
+}
+
+# Create Listeners for the Target Groups
+## You can only create a single listener for a port to avoid errors. We will add a listener rule to route traffic
+## to the wordpress target group
+
+resource "aws_lb_listener" "webserver-listener-80" {
+  load_balancer_arn = aws_lb.terraform-internal-alb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.wordpress-target-group.arn
+  }
+}
+
+## listener rule for to route requests to tooling target
+## A rule was created to route traffic to tooling when the host header changes
+
+resource "aws_lb_listener_rule" "webserver-listener-80-rule" {
+  listener_arn = aws_lb_listener.webserver-listener-80.arn
+  priority     = 99
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.tooling-target-group.arn
+  }
+
+  condition {
+    host_header {
+      values = ["tooling.kragrahl.cf"]
+    }
+  }
+}
+```
+In the `variables.tf` file, paste the following code:
+
+```
+variable "public-sg" {
+  default = {}
+}
+
+variable "private-sg" {
+  default = {}
+}
+
+variable "public-subnets-1" {
+  default = {}
+}
+
+variable "public-subnets-2" {
+  default = {}
+}
+
+variable "private-subnets-1" {
+  default = {}
+}
+
+variable "private-subnets-2" {
+  default = {}
+}
+
+variable "vpc_id" {
+  default = ""
+  type = string
+}
+
+```
+
+In the `outputs.tf` file, paste the code below:
+```
+#output the External Load balancer DNS
+output "alb_dns_name" {
+  description = "External Load balancer DNS"
+  value       = aws_lb.terraform-external-alb.dns_name
+}
+
+# output the External Load balancer target group
+output "nginx-target-group" {
+  description = "External Load balancer target group"
+  value       = aws_lb_target_group.nginx-target-group.arn
+}
+
+
+# Output Internal Load balancer target group
+output "wordpress-target-group" {
+  description = "Internal Load balancer target group"
+  value       = aws_lb_target_group.wordpress-target-group.arn
+}
+
+
+
+# Output Internal Load balancer target group
+output "tooling-target-group" {
+  description = "Internal Load balancer target group"
+  value       = aws_lb_target_group.tooling-target-group.arn
+}
+```
+### Module Autoscaling
+In the `main.tf` file, paste the following code:
+```
+//// Launch Templates ///////
+
+resource "aws_launch_template" "bastion" {
+  name = "bastion-launch-template"
+
+  image_id = var.ami-bastion
+
+  instance_type = var.instance_type
+
+  vpc_security_group_ids = [var.bastion-sg]
+
+  iam_instance_profile {
+    name = var.instance_profile
+  }
+
+  placement {
+    availability_zone = var.template_az
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = {
+      Name = "terraform-bastion"
+    }
+  }
+
+  # user_data = filebase64("bastion.sh")
+
+    lifecycle {
+      create_before_destroy = true
+  }
+}
+
+
+resource "aws_launch_template" "nginx" {
+  name = "nginx-launch-template"
+
+  image_id = var.ami-nginx
+
+  instance_type = var.instance_type
+
+  vpc_security_group_ids = [var.nginx-sg]
+
+  iam_instance_profile {
+    name = var.instance_profile
+  }
+
+  placement {
+    availability_zone = var.template_az
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = {
+      Name = "terraform-nginx"
+    }
+  }
+
+  # user_data = filebase64("nginx.sh")
+
+    lifecycle {
+      create_before_destroy = true
+  }
+}
+
+resource "aws_launch_template" "tooling" {
+  name = "tooling-launch-template"
+
+  image_id = var.ami-web
+
+  instance_type = var.instance_type
+
+  vpc_security_group_ids = [var.webservers-sg]
+
+  iam_instance_profile {
+    name = var.instance_profile
+  }
+
+  placement {
+    availability_zone = var.template_az
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = {
+      Name = "terraform-tooling"
+    }
+  }
+
+  # user_data = filebase64("tooling.sh")
+
+    lifecycle {
+      create_before_destroy = true
+  }
+}
+
+resource "aws_launch_template" "wordpress" {
+  name = "wordpress-launch-template"
+
+  image_id = var.ami-web
+
+  instance_type = var.instance_type
+
+  vpc_security_group_ids = [var.webservers-sg]
+
+  iam_instance_profile {
+    name = var.instance_profile
+  }
+
+  placement {
+    availability_zone = var.template_az
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = {
+      Name = "terraform-wordpress"
+    }
+  }
+
+  # user_data = filebase64("wordpress.sh")
+
+    lifecycle {
+      create_before_destroy = true
+  }
+}
+
+////// Autoscaling Group //////
+
+# ---- Autoscaling for bastion  hosts
+resource "aws_autoscaling_group" "bastion-asg" {
+  name                      = "bastion-asg"
+  max_size                  = 2
+  min_size                  = 1
+  health_check_grace_period = 300
+  health_check_type         = "ELB"
+  desired_capacity          = 1
+  vpc_zone_identifier = [
+    var.public_subnets-1,
+    var.public_subnets-2
+  ]
+
+
+  launch_template {
+    id      = aws_launch_template.bastion.id
+    version = "$Latest"
+  }
+  tag {
+    key                 = "Name"
+    value               = "terraform-bastion"
+    propagate_at_launch = true
+  }
+
+}
+
+
+# ------ Autoscslaling group for nginx reverse proxy
+
+resource "aws_autoscaling_group" "nginx-asg" {
+  name                      = "nginx-asg"
+  max_size                  = 2
+  min_size                  = 1
+  health_check_grace_period = 300
+  health_check_type         = "ELB"
+  desired_capacity          = 1
+  vpc_zone_identifier = [
+    var.public_subnets-1,
+    var.public_subnets-2
+  ]
+
+  launch_template {
+    id      = aws_launch_template.nginx.id
+    version = "$Latest"
+  }
+
+  tag {
+    key                 = "Name"
+    value               = "terraform-nginx"
+    propagate_at_launch = true
+  }
+}
+
+# ------ Autoscaling group for tooling webserver
+
+resource "aws_autoscaling_group" "tooling-asg" {
+  name                      = "tooling-asg"
+  max_size                  = 2
+  min_size                  = 1
+  health_check_grace_period = 300
+  health_check_type         = "ELB"
+  desired_capacity          = 1
+  vpc_zone_identifier = [
+    var.private_subnets-1,
+    var.private_subnets-2
+  ]
+
+  launch_template {
+    id      = aws_launch_template.tooling.id
+    version = "$Latest"
+  }
+
+  tag {
+    key                 = "Name"
+    value               = "terraform-tooling"
+    propagate_at_launch = true
+  }
+}
+
+# ------ Autoscaling group for wordpress webserver
+resource "aws_autoscaling_group" "wordpress-asg" {
+  name                      = "wordpress-asg"
+  max_size                  = 2
+  min_size                  = 1
+  health_check_grace_period = 300
+  health_check_type         = "ELB"
+  desired_capacity          = 1
+  vpc_zone_identifier = [
+    var.private_subnets-1,
+    var.private_subnets-2
+  ]
+
+  launch_template {
+    id      = aws_launch_template.wordpress.id
+    version = "$Latest"
+  }
+
+  tag {
+    key                 = "Name"
+    value               = "terraform-wordpress"
+    propagate_at_launch = true
+  }
+}
+
+# attaching autoscaling group of nginx to external load balancer
+resource "aws_autoscaling_attachment" "asg_attachment_nginx" {
+  autoscaling_group_name = aws_autoscaling_group.nginx-asg.id
+  alb_target_group_arn   = var.nginx-target-group
+}
+
+# attaching autoscaling group of wordpress to internal load balancer
+resource "aws_autoscaling_attachment" "asg_attachment_wordpress" {
+  autoscaling_group_name = aws_autoscaling_group.wordpress-asg.id
+  alb_target_group_arn   = var.wordpress-target-group
+}
+
+# attaching autoscaling group of tooling to internal load balancer
+resource "aws_autoscaling_attachment" "asg_attachment_tooling" {
+  autoscaling_group_name = aws_autoscaling_group.tooling-asg.id
+  alb_target_group_arn   = var.tooling-target-group
+}
+
+# creating sns topic for all the auto scaling groups
+resource "aws_sns_topic" "terraform-sns" {
+  name = "Default_CloudWatch_Alarms_Topic"
+}
+
+
+# creating notification for all the auto scaling groups
+resource "aws_autoscaling_notification" "terraform_notifications" {
+  group_names = [
+    aws_autoscaling_group.bastion-asg.name,
+    aws_autoscaling_group.nginx-asg.name,
+    aws_autoscaling_group.wordpress-asg.name,
+    aws_autoscaling_group.tooling-asg.name,
+  ]
+  notifications = [
+    "autoscaling:EC2_INSTANCE_LAUNCH",
+    "autoscaling:EC2_INSTANCE_TERMINATE",
+    "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+    "autoscaling:EC2_INSTANCE_TERMINATE_ERROR",
+  ]
+
+  topic_arn = aws_sns_topic.terraform-sns.arn
+}
+
+```
+
+In the `variables.tf` file, paste the following code:
+```
+// # define the hihghest number of subnets
+// variable "max_subnets" {}
+
+
+variable "ami-web" {}
+
+
+variable "instance_type" {}
+
+
+variable "instance_profile" {}
+
+
+variable "keypair" {}
+
+variable "ami-bastion" {}
+
+
+variable "webservers-sg" {}
+
+
+variable "bastion-sg" {}
+
+
+variable "nginx-sg" {}
+
+
+variable "private_subnets-1" {}
+
+
+variable "private_subnets-2" {}
+
+ 
+variable "public_subnets-1" {}
+
+ 
+variable "public_subnets-2" {}
+
+
+variable "ami-nginx" {}
+
+
+variable "nginx-target-group" {}
+
+
+variable "wordpress-target-group" {}
+
+
+variable "tooling-target-group" {}
+
+variable "template_az" {}
+```
+**Note**: Though it is commented out in the terraform code, we need to create user data scripts that will install the packages we want on the servers that will be spun up by autosccaling resource.
+
+### Module EFS
+In the `main.tf` file, paste the code below:
+```
+# create key from key management system
+resource "aws_kms_key" "terraform-kms" {
+  description = "KMS key"
+  policy = jsonencode({
+  "Version": "2012-10-17",
+  "Id": "kms-key-policy",
+  "Statement": [
+    {
+      "Sid": "Enable IAM User Permissions",
+      "Effect": "Allow",
+      "Principal": {"AWS": "arn:aws:iam::${var.account_no}:root"},
+      "Action": "kms:*",
+      "Resource": "*"
+    }
+  ]
+})
+}
+
+# create key alias
+resource "aws_kms_alias" "alias" {
+  name          = "alias/kms"
+  target_key_id = aws_kms_key.terraform-kms.key_id
+}
+
+# create Elastic file system
+resource "aws_efs_file_system" "terraform-efs" {
+  encrypted  = true
+  kms_key_id = aws_kms_key.terraform-kms.arn
+
+  tags = {
+    Name = "terraform-efs"
+  }
+}
+
+
+# set first mount target for the EFS 
+resource "aws_efs_mount_target" "subnet-1" {
+  file_system_id  = aws_efs_file_system.terraform-efs.id
+  subnet_id       = var.efs-subnet-1
+  security_groups = [var.efs-sg]
+}
+
+
+# set second mount target for the EFS 
+resource "aws_efs_mount_target" "subnet-2" {
+  file_system_id  = aws_efs_file_system.terraform-efs.id
+  subnet_id       = var.efs-subnet-2
+  security_groups = [var.efs-sg]
+}
+
+
+# create access point for wordpress
+resource "aws_efs_access_point" "wordpress" {
+  file_system_id = aws_efs_file_system.terraform-efs.id
+
+  posix_user {
+    gid = 0
+    uid = 0
+  }
+
+  root_directory {
+    path = "/wordpress"
+
+    creation_info {
+      owner_gid   = 0
+      owner_uid   = 0
+      permissions = 0755
+    }
+
+  }
+
+}
+
+
+# create access point for tooling
+resource "aws_efs_access_point" "tooling" {
+  file_system_id = aws_efs_file_system.terraform-efs.id
+  posix_user {
+    gid = 0
+    uid = 0
+  }
+
+  root_directory {
+
+    path = "/tooling"
+
+    creation_info {
+      owner_gid   = 0
+      owner_uid   = 0
+      permissions = 0755
+    }
+
+  }
+}
+```
+
+In the `variables.tf` file, paste the code below:
+```
+# first subnets to allow mount to the elastic file system
+variable "efs-subnet-2" {}
+
+# second subnets to allow mount to the elastic file system
+variable "efs-subnet-1" {}
+
+# security groups for the elastic file system
+variable "efs-sg" {}
+
+# account ID for the AWS user
+variable "account_no" {} 
+```
 
 
 
