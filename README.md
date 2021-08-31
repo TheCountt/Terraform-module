@@ -32,6 +32,11 @@ In the example above, you will have to have module ‘servers’ to have output 
 
 - Refactor your project using Modules
 
+Do not forget the Reference Architecture
+
+![tooling_project_15](https://user-images.githubusercontent.com/76074379/131581164-07962e3f-9e20-4538-8be8-4649e8fbfdcf.png)
+
+
 Break down your Terraform codes to have all resources in their respective modules. Combine resources of a similar type into directories within a ‘modules’ directory, for example, like this:
 
 ```
@@ -42,7 +47,6 @@ Break down your Terraform codes to have all resources in their respective module
   - autoscaling
   - compute
   - network
-  - security
   ```
   Each module should contain  the following files:
 
@@ -533,6 +537,8 @@ output "instance_profile" {
   value = aws_iam_instance_profile.terraform-profile.id
 }
 ```
+Run command `terraform init` and `terraform plan`.( If there are problems with your code, there will be an error message here first)
+
 ### Compute Module
 
 In the `main.tf` file, paste the code below:
@@ -614,6 +620,7 @@ resource "aws_key_pair" "terraform-key" {
   public_key = file("~/.ssh/id_rsa.pub")
 }
 ```
+Run command `terraform init` and `terraform plan`.( If there are problems with your code, there will be an error message here first)
 
 ### Module ALB
 In the `main.tf` file, paste the following code:
@@ -1155,6 +1162,8 @@ variable "tooling-target-group" {}
 
 variable "template_az" {}
 ```
+Run command `terraform init` and `terraform plan`.( If there are problems with your code, there will be an error message here first)
+
 **Note**: Though it is commented out in the terraform code, we need to create user data scripts that will install the packages we want on the servers that will be spun up by autosccaling resource.
 
 ### Module EFS
@@ -1270,6 +1279,7 @@ variable "efs-sg" {}
 # account ID for the AWS user
 variable "account_no" {} 
 ```
+Run command `terraform init` and `terraform plan`.( If there are problems with your code, there will be an error message here first)
 
 ### Module RDS
 In the `main.tf` file, paste the code below:
@@ -1338,4 +1348,5 @@ output "port" {
   description = "The port the database is listening on"
 }
 ```
+Run command `terraform init` and `terraform plan`.( If there are problems with your code, there will be an error message here first)
 
