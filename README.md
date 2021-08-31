@@ -538,7 +538,82 @@ output "instance_profile" {
 In the `main.tf` file, paste the code below:
 
 ```
+# create instance for bastion host
+resource "aws_instance" "Bastion" {
+  ami                         = var.ami-bastion
+  instance_type               = var.instance_type
+  subnet_id                   = var.subnets-compute
+  vpc_security_group_ids      = [var.sg-compute]
+  associate_public_ip_address = var.associate_public_ip_address
+  key_name                    = var.keypair
 
+  tags = {
+    Name = "terraform_bastion"
+  }
+}
+
+
+# create instance for nginx
+resource "aws_instance" "nginx" {
+  ami                         = var.ami-nginx
+  instance_type               = var.instance_type
+  subnet_id                   = var.subnets-compute
+  vpc_security_group_ids      = [var.sg-compute]
+  associate_public_ip_address = var.associate_public_ip_address
+  key_name                    = var.keypair
+
+  tags = {
+    Name = "terraform_nginx"
+  }
+}
+
+
+# create instance for web server
+resource "aws_instance" "webserver" {
+  ami                         = var.ami-webserver
+  instance_type               = var.instance_type
+  subnet_id                   = var.subnets-compute
+  vpc_security_group_ids      = [var.sg-compute]
+  associate_public_ip_address = var.associate_public_ip_address
+  key_name                    = var.keypair
+
+  tags = {
+    Name = "terraform_webserver"
+  }
+}
+```
+
+In the `variables.tf` file, paste the code below:
+```
+variable "subnets-compute" {}
+variable "ami-bastion" {}
+variable "ami-nginx" {}
+variable "ami-webserver" {}
+
+variable "sg-compute" {}
+
+variable "instance_type" {}
+
+variable "associate_public_ip_address" {
+  default = true
+  type = bool
+}
+
+variable "keypair" {
+    type = string
+    default = "terraform-key"
+}
+```
+We need to upload our PEM key so we can spin some resources such as instances. So we create a new file called `keypair.tf`
+
+- Paste the code below into `keypair.tf`
+
+```
+resource "aws_key_pair" "terraform-key" {
+  key_name   = "terraform-key"
+  public_key = file("~/.ssh/id_rsa.pub")
+}
+```
 
 
 
