@@ -1618,7 +1618,9 @@ The structure of your working directory should look like this:
 ```
 
 Now run `terraform apply` and type ***yes*** when prompted to provision your infrastructure
-    
-    
+
+![{B497B613-8C19-45A8-9B95-BB928726AEA8} png](https://user-images.githubusercontent.com/76074379/131587499-67ef29cc-9fe4-4f1c-8f6c-1e0cbb982969.jpg)
+
+*Note*: the above picture does not represent the automated infrastructure cause I already provisioned them.
     
    
