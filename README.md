@@ -537,7 +537,7 @@ output "instance_profile" {
   value = aws_iam_instance_profile.terraform-profile.id
 }
 ```
-Run command `terraform init` and `terraform plan`.( If there are problems with your code, there will be an error message here first)
+
 
 ### Compute Module
 
@@ -824,6 +824,8 @@ output "tooling-target-group" {
   value       = aws_lb_target_group.tooling-target-group.arn
 }
 ```
+Run command `terraform init` and `terraform plan`.( If there are problems with your code, there will be an error message here first)
+
 ### Module Autoscaling
 In the `main.tf` file, paste the following code:
 ```
@@ -1581,3 +1583,40 @@ locals {
   }
 }
 ```
+Run command `terraform init` and `terraform plan`.( If there are problems with your code, there will be an error message here first).
+
+All resources to be provisioned will be printed on the screen like this:
+![{98BB10AB-8171-4DF0-AE5E-3A4B1191C525} png](https://user-images.githubusercontent.com/76074379/131585284-3228e19d-2a54-4796-b5af-58385358d4bd.jpg)
+
+The structure of your working directory should look like this:
+
+```
+└── PBL
+    ├── modules
+    |   ├── ALB
+    |     ├── ... (module .tf files, e.g., main.tf, outputs.tf, variables.tf)     
+    |   ├── EFS
+    |     ├── ... (module .tf files) 
+    |   ├── RDS
+    |     ├── ... (module .tf files) 
+    |   ├── autoscaling
+    |     ├── ... (module .tf files) 
+    |   ├── compute
+    |     ├── ... (module .tf files) 
+    |   ├── network
+    |     ├── ... (module .tf files)
+    |   ├── security
+    |     ├── ... (module .tf files)
+    ├── main.tf
+    ├── backends.tf
+    ├── providers.tf
+    ├── data.tf
+    ├── outputs.tf
+    ├── terraform.tfvars (do not forget to add it to .gitignore since it can contain your sensitive information)
+    └── variables.tf
+    ```
+    Now run `terraform apply` and type yes when prompted to provision your infrastructure
+    
+    
+    
+   
