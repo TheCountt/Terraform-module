@@ -1617,7 +1617,7 @@ The structure of your working directory should look like this:
     └── variables.tf
 ```
 
-Now run `terraform apply` and type yes when prompted to provision your infrastructure
+Now run `terraform apply` and type ***yes*** when prompted to provision your infrastructure
     
     
     
