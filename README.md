@@ -313,8 +313,231 @@ resource "aws_security_group_rule" "datalayer-mysql" {
 }
 ```
 
+Paste the below code in the `variable.tf` file
+
+```
+# AWS region to deploy the infrastructure
+variable "region" {}
+
+# the preffered subnet cidr for the resources
+variable "vpc_cidr" {}
+
+# the maxinum number of subnets to be created
+variable "max_subnets" {
+  type = number
+}
+
+# setting enabling functions for the vpc
+variable "enable_dns_support" {}
+
+variable "enable_dns_hostnames" {
+  default = "true"
+}
+
+variable "enable_classiclink" {}
+
+variable "enable_classiclink_dns_support" {}
+
+# private subnets
+variable "private_subnets" {
+  type = list(any)
+}
+
+# public subnets
+variable "public_subnets" {
+  type = list(any)
+}
+
+# the mumber of desired private subnets
+variable "private_subnet_count" {
+  description = "number of desired private subnets"
+  type        = number
+}
+
+# the mumber of desired public subnets
+variable "public_subnet_count" {
+  description = "number of desired public subnets"
+  type        = number
+
+}
+
+variable "destination_cidr_block" {
+  default = "0.0.0.0/0"
+  type = string
+}
+
+variable "environment" {
+  default = true
+}
+
+# the security groups
+variable "security_groups" {
+  default = {}
+}
+```
+
+We need a terraform file for roles. So we create a `roles.tf` file.(If you are confused about how to go about the infrastructure code, you can always go to the console and document the steps down so as to guide you when writing the terraform code)
+
+```
+# create IAM role for all instance
+resource "aws_iam_role" "terraform-role" {
+  name = "terraform-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+
+  tags = {
+    tag-key = "terraform-role"
+  }
+}
+
+# create IAM policy for all instance
+resource "aws_iam_policy" "terraform-policy" {
+  name        = "terraform_policy"
+  path        = "/"
+  description = "terraform policy"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "ec2:Describe*",
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+# attach IAM policy to the IAM role
+resource "aws_iam_role_policy_attachment" "terraform-attach" {
+  role       = aws_iam_role.terraform-role.name
+  policy_arn = aws_iam_policy.terraform-policy.arn
+}
+
+# create instance profile and attach to the IAM role
+resource "aws_iam_instance_profile" "terraform-profile" {
+  name = "aws_instance_profile_terraform-profile"
+  role = aws_iam_role.terraform-role.name
+}
+```
+
+In the `outputs.tf` file, paste the below code soas to print the outputs we specified on screen for us
+
+```
+# output for the first public subnet in the index
+output "public_subnets-1" {
+  value       = aws_subnet.public-subnets[0].id
+  description = "The first public subnet in the subnets"
+}
+
+# output for the second public subnet in the index
+output "public_subnets-2" {
+  value       = aws_subnet.public-subnets[1].id
+  description = "The first public subnet"
+}
+
+# output for the first private subnet in the index
+output "private_subnets-1" {
+  value       = aws_subnet.private-subnets[0].id
+  description = "The first private subnet"
+}
+
+# output for the second private subnet in the index
+output "private_subnets-2" {
+  value       = aws_subnet.private-subnets[1].id
+  description = "The second private subnet"
+}
 
 
+# output for the third private subnet in the index
+output "private_subnets-3" {
+  value       = aws_subnet.private-subnets[2].id
+  description = "The third private subnet"
+}
+
+output "private_subnets" {
+  value       = aws_subnet.private-subnets[*].id
+  description = "All private subnet"
+}
+
+
+# output for the fourth private subnet in the index
+output "private_subnets-4" {
+  value       = aws_subnet.private-subnets[3].id
+  description = "The fourth private subnet"
+}
+
+
+
+# output for application load balancer security group
+output "ALB-sg" {
+  value = aws_security_group.terraform-sg["ALB"].id
+}
+
+
+# output for the intetrnal load balancer security group
+output "IALB-sg" {
+  value = aws_security_group.terraform-sg["IALB"].id
+}
+
+
+# output for the bastion security group
+output "bastion-sg" {
+  value = aws_security_group.terraform-sg["bastion"].id
+}
+
+
+# output for the nginx security group
+output "nginx-sg" {
+  value = aws_security_group.terraform-sg["nginx"].id
+}
+
+
+# output for the webservers security group
+output "webservers-sg" {
+  value = aws_security_group.terraform-sg["webservers"].id
+}
+
+
+# output for the data layer security group
+output "data-layer" {
+  value = aws_security_group.terraform-sg["data-layer"].id
+}
+
+
+# output for the vpc id
+output "vpc_id" {
+  value = aws_vpc.terraform.id
+}
+
+# output for the max subnets
+output "max_subnets" {
+  value = 10
+}
+
+
+# output for the instance profile
+output "instance_profile" {
+  value = aws_iam_instance_profile.terraform-profile.id
+}
+```
+### Compute Module
+
+In the `main.tf` file, paste the code below:
+
+```
 
 
 
