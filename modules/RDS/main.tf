@@ -1,6 +1,6 @@
 resource "random_shuffle" "private-sb" {
   input        = var.private_subnets
-  result_count = 2
+  result_count = 3
 }
 
 
@@ -28,7 +28,7 @@ locals {
 
 # Create DB instance
 resource "aws_db_instance" "terraform-rds" {
-  allocated_storage    = 20
+  allocated_storage    = 10
   storage_type         = "gp2"
   engine               = "mysql"
   engine_version       = "5.7"
@@ -37,7 +37,7 @@ resource "aws_db_instance" "terraform-rds" {
   username             = local.db_secret.username
   password             = local.db_secret.password
   parameter_group_name = "default.mysql5.7"
-  db_subnet_group_name = "aws_db_subnet_group.terraform-rds_subnet-group.name"
+  db_subnet_group_name = aws_db_subnet_group.terraform-rds_subnet-group.name
   vpc_security_group_ids = [var.db-sg]
   skip_final_snapshot  = true
   multi_az             = true

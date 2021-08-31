@@ -1,6 +1,6 @@
 /// Resources for Nginx Reverse Proxy
 
-# Create a External(Internet-Facing) Load Balancer
+# Create an External(Internet-Facing) Load Balancer
 resource "aws_lb" "terraform-external-alb" {
   name     = "terraform-external-alb"
   internal = false
@@ -133,8 +133,5 @@ resource "aws_lb_listener_rule" "webserver-listener-80-rule" {
     }
   }
 }
-
-
-
 
 

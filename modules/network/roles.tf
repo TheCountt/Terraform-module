@@ -54,6 +54,6 @@ resource "aws_iam_instance_profile" "terraform-profile" {
 # provide a public key for the instance
 # resource "aws_key_pair" "terraform-key" {
 #   key_name   = "terraform-key"
-#   public_key = file("C:/Users/user/.ssh/id_rsa.pub")
+#   public_key = file("~/.ssh/id_rsa.pub")
 # }
 # public_key_path                = "ssh-rsa %your_key%"

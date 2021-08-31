@@ -21,6 +21,7 @@ module "network" {
 # The Module creates instances for various servers
 module "compute" {
   source          = "./modules/compute"
+  instance_type   = var.instance_type
   ami-bastion     = var.ami
   ami-nginx       = var.ami
   ami-webserver   = var.ami

@@ -1,4 +1,4 @@
-#output the External Load balancaer DNS
+#output the External Load balancer DNS
 output "alb_dns_name" {
   description = "External Load balancer DNS"
   value       = aws_lb.terraform-external-alb.dns_name
