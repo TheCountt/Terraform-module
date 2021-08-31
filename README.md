@@ -1614,8 +1614,9 @@ The structure of your working directory should look like this:
     ├── outputs.tf
     ├── terraform.tfvars (do not forget to add it to .gitignore since it can contain your sensitive information)
     └── variables.tf
-    ```
-    Now run `terraform apply` and type yes when prompted to provision your infrastructure
+```
+
+Now run `terraform apply` and type yes when prompted to provision your infrastructure
     
     
     
