@@ -1,2 +1,0 @@
-<<EOF
-#/bin/bash
