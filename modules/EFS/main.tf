@@ -1,8 +1,7 @@
-# create key foom key management system
+# create key from key management system
 resource "aws_kms_key" "terraform-kms" {
   description = "KMS key"
-  policy = <<EOF
-  {
+  policy = jsonencode({
   "Version": "2012-10-17",
   "Id": "kms-key-policy",
   "Statement": [
@@ -14,8 +13,7 @@ resource "aws_kms_key" "terraform-kms" {
       "Resource": "*"
     }
   ]
-}
-EOF
+})
 }
 
 # create key alias
