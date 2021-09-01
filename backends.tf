@@ -25,12 +25,12 @@ resource "aws_dynamodb_table" "terraform_locks" {
   }
 }
 
-terraform {
-  backend "s3" {
-    bucket         = "dapo-dev-terraform-bucket1"
-    key            = "global/s3/terraform.tfstate"
-    region         = "us-west-1"
-    dynamodb_table = "dapo-dev-terraform-bucket1-locks"
-    encrypt        = true
-  }
-}
+# terraform {
+#   backend "s3" {
+#     bucket         = "dapo-dev-terraform-bucket1"
+#     key            = "global/s3/terraform.tfstate"
+#     region         = "us-west-1"
+#     dynamodb_table = "dapo-dev-terraform-bucket1-locks"
+#     encrypt        = true
+#   }
+# }
